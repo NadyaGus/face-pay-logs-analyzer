@@ -2,7 +2,7 @@ services:
   # Kafka - Message Broker (KRaft mode)
   kafka:
     image: confluentinc/cp-kafka:8.3.0
-    container_name: fintech-kafka
+    container_name: facepay-kafka
     ports:
       - "9092:9092"
     environment:
@@ -23,30 +23,30 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks:
-      - fintech-network
+      - facepay-network
 
   # PostgreSQL
   postgres:
     image: postgres:17
-    container_name: fintech-postgres
+    container_name: facepay-postgres
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: fintech_stream
+      POSTGRES_DB: facepay_stream
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - fintech-network
+      - facepay-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d fintech_stream"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d facepay_stream"]
       interval: 10s
       timeout: 5s
       retries: 5
 
 networks:
-  fintech-network:
+  facepay-network:
     driver: bridge
 
 volumes:
