@@ -1,0 +1,54 @@
+services:
+  # Kafka - Message Broker (KRaft mode)
+  kafka:
+    image: confluentinc/cp-kafka:8.3.0
+    container_name: fintech-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_INTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      # KRaft mode requires CLUSTER_ID
+      CLUSTER_ID: "Mk93UHhhQYiV3R29qT0J7g"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - fintech-network
+
+  # PostgreSQL
+  postgres:
+    image: postgres:17
+    container_name: fintech-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: fintech_stream
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fintech-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d fintech_stream"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  fintech-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  kafka_data:

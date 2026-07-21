@@ -35,3 +35,23 @@ bin/
 
 ### Study ###
 .cheatsheets
+
+### Maven / Gradle / Build tools ###
+target/
+build/
+!.mvn/wrapper/maven-wrapper.jar
+
+### IDE ###
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+*.bak
+*.swp
+*~
+
+### Operating System Files ###
+Thumbs.db
+.DS_Store
