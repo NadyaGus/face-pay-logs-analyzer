@@ -99,7 +99,7 @@ SELECT COUNT(*) FROM critical_logs;
 ### 3. Проверить в логах приложения
 
 ```bash
-docker compose logs app | grep -E "(CRITICAL|Sent transaction)"
+docker compose logs -f app | grep -E "(CRITICAL|Sent transaction)"
 ```
 
 Должны появиться строки вида:
@@ -107,6 +107,8 @@ docker compose logs app | grep -E "(CRITICAL|Sent transaction)"
 [Generator] Sent transaction #1: abc-123... (Status: Успешно завершена)
 [CRITICAL] Transaction: xyz-456... | Status: Не удалась | Error: Лицо закрыто
 ```
+
+*Примечание: Если команда не показывает результат, проверьте логи полной командой `docker compose logs -f app`*
 
 ---
 
