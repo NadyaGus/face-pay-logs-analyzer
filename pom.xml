@@ -30,6 +30,7 @@
 		<java.version>21</java.version>
 		<kafka.version>3.8.0</kafka.version>
 		<spark.version>3.5.0</spark.version>
+		<maven.exec.javaArgs>--add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED</maven.exec.javaArgs>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -41,11 +42,6 @@
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-			<scope>runtime</scope>
-		</dependency>
 		<!-- Kafka clients -->
 		<dependency>
 			<groupId>org.apache.kafka</groupId>
@@ -131,6 +127,8 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+					<mainClass>com.facepay.app.PaymentStreamApp</mainClass>
+					<jvmArguments>${maven.exec.javaArgs}</jvmArguments>
 				</configuration>
 			</plugin>
 			<plugin>

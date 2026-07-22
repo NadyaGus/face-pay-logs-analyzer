@@ -3,7 +3,6 @@ package com.facepay.app.consumer;
 import com.facepay.app.enums.PaymentStatus;
 import com.facepay.app.models.PaymentTransaction;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.spark.api.java.function.FilterFunction;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -22,9 +21,11 @@ import java.io.Serializable;
  */
 public class LogConsumer implements Serializable {
 
-    private static final String BOOTSTRAP_SERVERS = "localhost:9092";
+    private static final String BOOTSTRAP_SERVERS = System.getenv("BOOTSTRAP_SERVERS") != null 
+            ? System.getenv("BOOTSTRAP_SERVERS") 
+            : "localhost:9092";
     private static final String TOPIC = "face-pay-logs";
-    private static final String PG_TABLE = "critical_logs";;
+    private static final String PG_TABLE = "critical_logs";
 
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
@@ -36,6 +37,13 @@ public class LogConsumer implements Serializable {
     }
 
     /**
+     * Остановка Spark сессии
+     */
+    public void stop() {
+        spark.stop();
+    }
+
+    /**
      * Точка входа в приложение
      */
     public static void main(String[] args) {
@@ -43,13 +51,9 @@ public class LogConsumer implements Serializable {
             LogConsumer consumer = new LogConsumer();
             consumer.start();
 
-            // Запускаем приложение на 1 минуту
-            System.out.println("Spark streaming will run for 60 seconds...");
             Thread.sleep(60000);
             
-            System.out.println("Stopping Spark streaming...");
-            consumer.spark.stop();
-            System.out.println("Spark streaming stopped.");
+            consumer.stop();
         } catch (Exception e) {
             System.err.println("Error in main: " + e.getMessage());
             e.printStackTrace();
@@ -74,6 +78,21 @@ public class LogConsumer implements Serializable {
     }
 
     /**
+     * Основной метод запуска consumer
+     */
+    public void start() {
+        try {
+            Dataset<Row> kafkaData = readFromKafka();
+            Dataset<PaymentTransaction> allTransactions = parseTransactions(kafkaData);
+            Dataset<PaymentTransaction> criticalLogs = filterCriticalLogs(allTransactions);
+            saveToPostgreSQL(criticalLogs);
+        } catch (Exception e) {
+            System.err.println("Error in consumer start: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Читает сообщения из Kafka и возвращает DataFrame
      */
     private Dataset<Row> readFromKafka() {
@@ -88,12 +107,10 @@ public class LogConsumer implements Serializable {
      * Парсит JSON из Kafka сообщения в структурированные данные
      */
     private Dataset<PaymentTransaction> parseTransactions(Dataset<Row> kafkaData) {
-        // Конвертируем бинарные данные в строку
         Dataset<String> jsonStrings = kafkaData
                 .selectExpr("CAST(value AS STRING)")
                 .as(Encoders.STRING());
 
-        // Парсим JSON и конвертируем в PaymentTransaction
         return jsonStrings.map(
                 (MapFunction<String, PaymentTransaction>) json -> objectMapper.readValue(json, PaymentTransaction.class),
                 Encoders.bean(PaymentTransaction.class)
@@ -104,90 +121,133 @@ public class LogConsumer implements Serializable {
      * Фильтрует критичные логи (неуспешные транзакции с ошибками)
      */
     private Dataset<PaymentTransaction> filterCriticalLogs(Dataset<PaymentTransaction> allTransactions) {
-        System.out.println("[filterCriticalLogs] Filtering logs...");
-        return allTransactions.filter(
-                (FilterFunction<PaymentTransaction>) transaction -> {
-                    // Jackson десериализует JSON "FAILED" в enum PaymentStatus.FAILED
-                    boolean isFailed = transaction.getStatus() != null && transaction.getStatus() == PaymentStatus.FAILED;
-                    boolean hasErrorCode = transaction.getErrorCode() != null;
-                    return isFailed && hasErrorCode;
-                }
-        );
+        return allTransactions.filter(this::isCriticalTransaction);
+    }
+
+    /**
+     * Проверяет, является ли транзакция критичной
+     */
+    private boolean isCriticalTransaction(PaymentTransaction transaction) {
+        boolean isFailed = transaction.getStatus() != null && transaction.getStatus() == PaymentStatus.FAILED;
+        boolean hasErrorCode = transaction.getErrorCode() != null;
+        
+        if (isFailed && hasErrorCode) {
+            logCriticalTransaction(transaction);
+        }
+        
+        return isFailed && hasErrorCode;
+    }
+
+    /**
+     * Логирует критичную транзакцию
+     */
+    private void logCriticalTransaction(PaymentTransaction transaction) {
+        System.out.println("[CRITICAL] Transaction: " + transaction.getTransactionId() + 
+                         " | Status: " + transaction.getStatus() + 
+                         " | Error: " + transaction.getErrorCode());
+    }
+
+    /**
+     * Создает JDBC URL для PostgreSQL
+     */
+    private String getPostgresUrl() {
+        return System.getenv("POSTGRES_URL") != null 
+                ? System.getenv("POSTGRES_URL") 
+                : "jdbc:postgresql://localhost:5432/facepay_stream";
+    }
+
+    /**
+     * Получает имя пользователя PostgreSQL
+     */
+    private String getPostgresUser() {
+        return System.getenv("POSTGRES_USER") != null 
+                ? System.getenv("POSTGRES_USER") 
+                : "admin";
+    }
+
+    /**
+     * Получает пароль PostgreSQL
+     */
+    private String getPostgresPassword() {
+        return System.getenv("POSTGRES_PASSWORD") != null 
+                ? System.getenv("POSTGRES_PASSWORD") 
+                : "admin";
     }
 
     /**
      * Сохраняет критичные логи в PostgreSQL
      */
     private void saveToPostgreSQL(Dataset<PaymentTransaction> criticalLogs) {
+        Dataset<Row> rowData = prepareRowData(criticalLogs);
+        startStreamWriter(rowData);
+    }
+
+    /**
+     * Подготавливает данные для сохранения: конвертирует и переименовывает колонки
+     */
+    private Dataset<Row> prepareRowData(Dataset<PaymentTransaction> criticalLogs) {
+        Dataset<Row> criticalLogsAsRow = criticalLogs.toDF();
+        
+        return criticalLogsAsRow
+                .withColumnRenamed("transactionId", "transaction_id")
+                .withColumnRenamed("timestamp", "timestamp")
+                .withColumnRenamed("accountId", "account_id")
+                .withColumnRenamed("merchantId", "merchant_id")
+                .withColumnRenamed("errorCode", "error_code")
+                .withColumnRenamed("errorMessage", "error_message")
+                .withColumnRenamed("created_at", "created_at");
+    }
+
+    /**
+     * Запускает потоковую запись в PostgreSQL
+     */
+    private void startStreamWriter(Dataset<Row> rowData) {
         try {
-            System.out.println("[saveToPostgreSQL] Converting to DataFrame and renaming columns...");
-            Dataset<Row> criticalLogsAsRow = criticalLogs.toDF();
+            String postgresUrl = getPostgresUrl();
+            String postgresUser = getPostgresUser();
+            String postgresPassword = getPostgresPassword();
             
-            // Переименовываем колонки из camelCase в snake_case для PostgreSQL
-            Dataset<Row> renamedColumns = criticalLogsAsRow
-                    .withColumnRenamed("transactionId", "transaction_id")
-                    .withColumnRenamed("timestamp", "timestamp")
-                    .withColumnRenamed("accountId", "account_id")
-                    .withColumnRenamed("merchantId", "merchant_id")
-                    .withColumnRenamed("errorCode", "error_code")
-                    .withColumnRenamed("errorMessage", "error_message")
-                    .withColumnRenamed("created_at", "created_at");
-            
-            System.out.println("[saveToPostgreSQL] Starting stream with foreachBatch...");
-            renamedColumns.writeStream()
-                    .foreachBatch((batchDF, batchId) -> {
-                        System.out.println("[foreachBatch] Processing batch ID: " + batchId);
-                        batchDF.write()
-                                .mode("append")
-                                .format("jdbc")
-                                .option("url", "jdbc:postgresql://localhost:5432/facepay_stream")
-                                .option("dbtable", "critical_logs")
-                                .option("user", "admin")
-                                .option("password", "admin")
-                                .option("driver", "org.postgresql.Driver")
-                                .save();
-                        System.out.println("[foreachBatch] Batch " + batchId + " written successfully");
+            rowData.writeStream()
+                    .foreachBatch(new org.apache.spark.api.java.function.VoidFunction2<org.apache.spark.sql.Dataset<org.apache.spark.sql.Row>, java.lang.Long>() {
+                        @Override
+                        public void call(org.apache.spark.sql.Dataset<org.apache.spark.sql.Row> batchDF, java.lang.Long batchId) {
+                            processBatch(batchDF, batchId, postgresUrl, postgresUser, postgresPassword);
+                        }
                     })
                     .outputMode("append")
                     .option("checkpointLocation", "/tmp/checkpoint")
-                    // Чтобы не было ошибок при перезапуске приложения уберем ошибку при потере данных
                     .option("failOnDataLoss", "false")
                     .start();
-            
-            System.out.println("[saveToPostgreSQL] Stream started successfully");
+        } catch (java.util.concurrent.TimeoutException e) {
+            System.err.println("Timeout while starting stream: " + e.getMessage());
+            throw new RuntimeException("Failed to start stream due to timeout", e);
         } catch (Exception e) {
-            System.out.println("[saveToPostgreSQL] Exception occurred: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Error starting stream: " + e.getMessage());
+            throw new RuntimeException("Failed to start stream", e);
         }
     }
 
     /**
-     * Основной метод запуска consumer
+     * Обрабатывает один батч данных
      */
-    public void start() {
-        System.out.println("Starting Spark Consumer...");
-        System.out.println("Reading from Kafka topic: " + TOPIC);
-        System.out.println("Critical logs will be saved to PostgreSQL: " + PG_TABLE);
-        System.out.println();
-
-        try {
-            // Читаем из Kafka
-            Dataset<Row> kafkaData = readFromKafka();
-
-            // Парсим JSON в объекты PaymentTransaction
-            Dataset<PaymentTransaction> allTransactions = parseTransactions(kafkaData);
-
-            // Фильтруем критичные логи
-            Dataset<PaymentTransaction> criticalLogs = filterCriticalLogs(allTransactions);
-
-            // Сохраняем в PostgreSQL
-            saveToPostgreSQL(criticalLogs);
-
-            System.out.println("Spark streaming started. Running for 60 seconds...");
-        } catch (Exception e) {
-            System.err.println("Error in Spark Consumer: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException(e);
+    private void processBatch(Dataset<Row> batchDF, long batchId, String postgresUrl, String postgresUser, String postgresPassword) {
+        if (batchDF.count() > 0) {
+            saveBatchToDatabase(batchDF, postgresUrl, postgresUser, postgresPassword);
         }
+    }
+
+    /**
+     * Сохраняет батч в PostgreSQL
+     */
+    private void saveBatchToDatabase(Dataset<Row> batchDF, String postgresUrl, String postgresUser, String postgresPassword) {
+        batchDF.write()
+                .mode("append")
+                .format("jdbc")
+                .option("url", postgresUrl)
+                .option("dbtable", "critical_logs")
+                .option("user", postgresUser)
+                .option("password", postgresPassword)
+                .option("driver", "org.postgresql.Driver")
+                .save();
     }
 }
