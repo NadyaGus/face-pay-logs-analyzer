@@ -52,6 +52,11 @@
 			<artifactId>kafka-clients</artifactId>
 			<version>${kafka.version}</version>
 		</dependency>
+		<!-- Jackson для Java 8 Date/Time -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+		</dependency>
 		<!-- Spark SQL для Structured Streaming -->
 		<dependency>
 			<groupId>org.apache.spark</groupId>
