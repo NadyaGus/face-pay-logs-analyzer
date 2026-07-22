@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PaymentGeneratorApp {
     private static final String BOOTSTRAP_SERVERS = "localhost:9092";
     private static final String TOPIC = "face-pay-logs";
-    private static final long DELAY_MS = 500;
+    private static final long DELAY_MS = 1000;
     private static final long RUN_DURATION_MINUTES = 1;
     
     public static void main(String[] args) {

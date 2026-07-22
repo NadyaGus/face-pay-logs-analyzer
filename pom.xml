@@ -68,14 +68,6 @@
 					<groupId>org.apache.logging.log4j</groupId>
 					<artifactId>log4j-slf4j2-impl</artifactId>
 				</exclusion>
-				<exclusion>
-					<groupId>org.apache.logging.log4j</groupId>
-					<artifactId>log4j-api</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.apache.logging.log4j</groupId>
-					<artifactId>log4j-core</artifactId>
-				</exclusion>
 			</exclusions>
 		</dependency>
 		<!-- Интеграция Spark с Kafka -->
@@ -83,6 +75,24 @@
 			<groupId>org.apache.spark</groupId>
 			<artifactId>spark-sql-kafka-0-10_2.13</artifactId>
 			<version>${spark.version}</version>
+		</dependency>
+		<!-- JDBC драйвер для PostgreSQL -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.7.3</version>
+		</dependency>
+		<!-- Servlet API для Spark UI -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>4.0.1</version>
+		</dependency>
+		<!-- ANTLR 4.9.3 для совместимости с Spark 3.5.0 -->
+		<dependency>
+			<groupId>org.antlr</groupId>
+			<artifactId>antlr4-runtime</artifactId>
+			<version>4.9.3</version>
 		</dependency>
 
 		<dependency>

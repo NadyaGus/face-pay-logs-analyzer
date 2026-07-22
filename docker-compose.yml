@@ -20,7 +20,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_DIRS: /var/lib/kafka/data
-      # Auto-create topics on first message
+      # Auto-create topics
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     volumes:
       - kafka_data:/var/lib/kafka/data
@@ -39,6 +39,7 @@ services:
       POSTGRES_PASSWORD: admin
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-sql.sql:/docker-entrypoint-initdb.d/init-sql.sql:ro
     networks:
       - facepay-network
     healthcheck:
