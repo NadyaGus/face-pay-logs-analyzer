@@ -26,6 +26,11 @@ services:
       - kafka_data:/var/lib/kafka/data
     networks:
       - facepay-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # PostgreSQL
   postgres:
@@ -34,19 +39,43 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: facepay_stream
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: ${POSTGRES_DB:-facepay_stream}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-sql.sql:/docker-entrypoint-initdb.d/init-sql.sql:ro
     networks:
       - facepay-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d facepay_stream"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-facepay_stream}"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # FacePay Log Analyzer Application
+  app:
+    build: .
+    container_name: facepay-app
+    environment:
+      # PostgreSQL
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/facepay_stream}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-admin}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      # Kafka - use kafka service name for internal network communication
+      BOOTSTRAP_SERVERS: ${BOOTSTRAP_SERVERS:-kafka:29092}
+      # For Spring Boot (if used)
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+      POSTGRES_URL: ${POSTGRES_URL:-jdbc:postgresql://postgres:5432/facepay_stream}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - facepay-network
 
 networks:
   facepay-network:

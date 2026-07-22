@@ -20,9 +20,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class PaymentStreamApp {
 
-    private static final String BOOTSTRAP_SERVERS = System.getenv("BOOTSTRAP_SERVERS") != null 
-            ? System.getenv("BOOTSTRAP_SERVERS") 
-            : "localhost:9092";
+    private static final String BOOTSTRAP_SERVERS = System.getenv("BOOTSTRAP_SERVERS");
+
     private static final String TOPIC = "face-pay-logs";
     private static final long GENERATOR_DELAY_MS = 1000;
     private static final long RUN_DURATION_MINUTES = 2;

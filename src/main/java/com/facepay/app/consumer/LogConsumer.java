@@ -21,11 +21,9 @@ import java.io.Serializable;
  */
 public class LogConsumer implements Serializable {
 
-    private static final String BOOTSTRAP_SERVERS = System.getenv("BOOTSTRAP_SERVERS") != null 
-            ? System.getenv("BOOTSTRAP_SERVERS") 
-            : "localhost:9092";
+    private static final String BOOTSTRAP_SERVERS = System.getenv("BOOTSTRAP_SERVERS");
     private static final String TOPIC = "face-pay-logs";
-    private static final String PG_TABLE = "critical_logs";
+    private static final String DB_TABLE = "critical_logs";
 
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
@@ -50,10 +48,16 @@ public class LogConsumer implements Serializable {
         try {
             LogConsumer consumer = new LogConsumer();
             consumer.start();
-
-            Thread.sleep(60000);
+            
+            System.out.println("[Consumer] Started. Press Ctrl+C to stop.");
+            
+            // Keep running until interrupted
+            Thread.sleep(Long.MAX_VALUE);
             
             consumer.stop();
+        } catch (InterruptedException e) {
+            System.out.println("[Consumer] Interrupted. Shutting down...");
+            System.exit(0);
         } catch (Exception e) {
             System.err.println("Error in main: " + e.getMessage());
             e.printStackTrace();
@@ -151,27 +155,21 @@ public class LogConsumer implements Serializable {
      * Создает JDBC URL для PostgreSQL
      */
     private String getPostgresUrl() {
-        return System.getenv("POSTGRES_URL") != null 
-                ? System.getenv("POSTGRES_URL") 
-                : "jdbc:postgresql://localhost:5432/facepay_stream";
+        return System.getenv("POSTGRES_URL");
     }
 
     /**
      * Получает имя пользователя PostgreSQL
      */
     private String getPostgresUser() {
-        return System.getenv("POSTGRES_USER") != null 
-                ? System.getenv("POSTGRES_USER") 
-                : "admin";
+        return System.getenv("POSTGRES_USER");
     }
 
     /**
      * Получает пароль PostgreSQL
      */
     private String getPostgresPassword() {
-        return System.getenv("POSTGRES_PASSWORD") != null 
-                ? System.getenv("POSTGRES_PASSWORD") 
-                : "admin";
+        return System.getenv("POSTGRES_PASSWORD");
     }
 
     /**
@@ -244,7 +242,7 @@ public class LogConsumer implements Serializable {
                 .mode("append")
                 .format("jdbc")
                 .option("url", postgresUrl)
-                .option("dbtable", "critical_logs")
+                .option("dbtable", DB_TABLE)
                 .option("user", postgresUser)
                 .option("password", postgresPassword)
                 .option("driver", "org.postgresql.Driver")
