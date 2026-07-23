@@ -53,19 +53,34 @@ services:
       timeout: 5s
       retries: 5
 
-  # FacePay Log Analyzer Application
-  app:
-    build: .
-    container_name: facepay-app
+  # Generator service
+  generator:
+    image: facepay/generator:latest
+    container_name: facepay-generator
+    build:
+      context: .
+      dockerfile: generator/Dockerfile
     environment:
-      # PostgreSQL
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/facepay_stream}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-admin}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-admin}
-      # Kafka - use kafka service name for internal network communication
+      # Kafka
       BOOTSTRAP_SERVERS: ${BOOTSTRAP_SERVERS:-kafka:29092}
-      # For Spring Boot (if used)
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - facepay-network
+    command: ["java", "-Dbootstrap.servers=kafka:29092", "-jar", "app.jar"]
+
+  # Spark consumer service
+  spark-consumer:
+    image: facepay/spark-consumer:latest
+    container_name: facepay-spark-consumer
+    build:
+      context: .
+      dockerfile: spark-consumer/Dockerfile
+    environment:
+      # Kafka
+      BOOTSTRAP_SERVERS: ${BOOTSTRAP_SERVERS:-kafka:29092}
+      # PostgreSQL
       POSTGRES_URL: ${POSTGRES_URL:-jdbc:postgresql://postgres:5432/facepay_stream}
       POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
@@ -76,6 +91,7 @@ services:
         condition: service_healthy
     networks:
       - facepay-network
+    command: ["java", "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens=java.base/java.lang=ALL-UNNAMED", "--add-opens=java.base/java.util=ALL-UNNAMED", "-Dbootstrap.servers=kafka:29092", "-Dpostgres.url=jdbc:postgresql://postgres:5432/facepay_stream", "-Dpostgres.user=admin", "-Dpostgres.password=admin", "-jar", "app.jar"]
 
 networks:
   facepay-network:
