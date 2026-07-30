@@ -13,6 +13,7 @@
         <module>core</module>
         <module>generator</module>
         <module>spark-consumer</module>
+        <module>api</module>
     </modules>
 
     <properties>

@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://postgres:5432/facepay_stream}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+server:
+  port: ${SERVER_PORT:8080}

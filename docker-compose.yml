@@ -93,6 +93,23 @@ services:
       - facepay-network
     command: ["java", "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens=java.base/java.lang=ALL-UNNAMED", "--add-opens=java.base/java.util=ALL-UNNAMED", "-Dbootstrap.servers=kafka:29092", "-Dpostgres.url=jdbc:postgresql://postgres:5432/facepay_stream", "-Dpostgres.user=admin", "-Dpostgres.password=admin", "-jar", "app.jar"]
 
+  # API service
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/facepay_stream
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    networks:
+      - facepay-network
+
 networks:
   facepay-network:
     driver: bridge
