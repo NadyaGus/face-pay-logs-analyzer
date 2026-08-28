@@ -1,6 +1,6 @@
 package com.facepay.app.controller;
 
-import com.facepay.app.model.ErrorLog;
+import com.facepay.app.models.ErrorLog;
 import com.facepay.app.repository.ErrorLogRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
