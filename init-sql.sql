@@ -22,3 +22,18 @@ CREATE INDEX IF NOT EXISTS idx_critical_logs_timestamp ON critical_logs(timestam
 
 -- Индекс для поиска по статусу
 CREATE INDEX IF NOT EXISTS idx_critical_logs_status ON critical_logs(status);
+
+-- Индекс для поиска по accountId (используется в API: findByAccountIdContaining)
+CREATE INDEX IF NOT EXISTS idx_critical_logs_account_id ON critical_logs(account_id);
+
+-- Индекс для поиска по merchantId (используется в API: countByMerchantId)
+CREATE INDEX IF NOT EXISTS idx_critical_logs_merchant_id ON critical_logs(merchant_id);
+
+-- Индекс для поиска по errorCode (используется в API: countByErrorCode)
+CREATE INDEX IF NOT EXISTS idx_critical_logs_error_code ON critical_logs(error_code);
+
+-- Составной индекс для фильтрации по статусу + timestamp (частый паттерн: получить ошибки за период)
+CREATE INDEX IF NOT EXISTS idx_critical_logs_status_timestamp ON critical_logs(status, timestamp);
+
+-- Индекс для сортировки по created_at (для пагинации и отображения последних ошибок)
+CREATE INDEX IF NOT EXISTS idx_critical_logs_created_at ON critical_logs(created_at DESC);
