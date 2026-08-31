@@ -105,12 +105,28 @@ docker compose up -d
 Swagger UI доступен на: `http://localhost:8080/swagger-ui.html`
 
 ## Roadmap
-[+] Запросы GET
-[] Фильтрация и сортировка GET запросов (`errorCode`, `merchantId`, `from`, `to`, `sort`)
-[] Запросы POST (`POST /api/errors` — создание, `PATCH /api/errors/{id}` — обновление)
-[] Валидация запросов (@NotNull, @Size, кастомный @ErrorCode)
-[] Расширенная статистика (totalErrors, avgPerDay, top N, группировка по времени)
-[] DELETE / Архивация (`DELETE /api/errors?before=...` — удаление старых записей)
-[] Health checks (`/api/health`, `/api/db-health` — проверка)
+
+### ✅ Выполнено
+- [x] GET `/api/errors` — пагинированный список
+- [x] GET `/api/errors/{id}` — ошибка по ID
+- [x] GET `/api/errors/stats` — статистика по errorCode
+- [x] GET `/api/errors/search?accountId=` — поиск по accountId
+- [x] Swagger UI документация
+- [x] Тесты для core модуля (51 тест)
+
+### ⏳ В процессе
+- [ ] Фильтрация и сортировка (`errorCode`, `merchantId`, `from`, `to`, `sort`)
+- [ ] Валидация входных данных (`@Size`, `@Pattern`)
+- [ ] DTO-классы вместо entity в response
+- [ ] Health checks (`/actuator/health`)
+
+### 📋 Планы
+- [ ] POST `/api/errors` — создание записи
+- [ ] PATCH `/api/errors/{id}` — обновление
+- [ ] DELETE `/api/errors?before=` — архивация
+- [ ] Расширенная статистика (totalErrors, avgPerDay, top N)
+- [ ] Аутентификация (Spring Security)
+- [ ] Тесты контроллера и репозитория
+- [ ] Метрики (Actuator + Prometheus)
 
 

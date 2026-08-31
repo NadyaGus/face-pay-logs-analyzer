@@ -19,6 +19,12 @@
   - Фильтрация критичных логов (неуспешные транзакции с кодами ошибок)
   - Сохранение в PostgreSQL таблицу `critical_logs`
 
+- **REST API** (api):
+  - Пагинированный список ошибок
+  - Поиск по accountId
+  - Статистика по errorCode
+  - Swagger UI документация
+
 ### Сервисы
 
 | Сервис | Описание | Порт |
@@ -27,6 +33,7 @@
 | `postgres` | База данных для хранения логов | `5432` |
 | `generator` | Генератор тестовых транзакций | - |
 | `spark-consumer` | Spark Streaming consumer | - |
+| `api` | REST API + Swagger UI | `8080` |
 
 ---
 
@@ -40,9 +47,10 @@
 
 ```
 fintech-stream-analyzer/
-├── core/              # Модели данных и enum (общая библиотека)
+├── core/              # Модели данных, enum, JPA-сущности
 ├── generator/         # Генератор транзакций (Kafka Producer)
 ├── spark-consumer/    # Spark Streaming Consumer (PostgreSQL Writer)
+├── api/               # REST API (Spring Boot)
 ├── pom.xml            # Parent POM (multi-module)
 ├── docker-compose.yml # Оркестрация контейнеров
 └── Dockerfile         # Сборка приложения
@@ -133,18 +141,24 @@ ORDER BY count DESC;
 
 ---
 
-## 📝 Остановка
+## 🧪 Тесты
 
 ```bash
-# Остановить контейнеры (данные сохраняются в volumes)
-docker compose down
+# Запустить тесты для core модуля
+./mvnw test -pl core
 
-# Остановить и удалить volumes (данные будут удалены!)
-docker compose down -v
-
-# Очистка кэша Maven
-./mvnw clean
+# Запустить все тесты
+./mvnw test
 ```
+
+### Текущее покрытие
+
+| Модуль | Статус | Кол-во тестов |
+|--------|--------|---------------|
+| `core` | ✅ 51 тест | 51 |
+| `api` | ⏳ В процессе | - |
+| `generator` | ⏳ В процессе | - |
+| `spark-consumer` | ⏳ В процессе | - |
 
 ---
 
@@ -153,8 +167,13 @@ docker compose down -v
 - [x] Генератор транзакций (Kafka Producer)
 - [x] Spark Streaming consumer (Kafka → PostgreSQL)
 - [x] Docker Compose оркестрация (Kafka + PostgreSQL + app)
-- [ ] **Web API REST** — сделать модуль REST API для получения данных (в процессе)
-- [ ] Покрытие тестами + метрики
+- [x] REST API модуль (Spring Boot)
+- [x] Тесты для core модуля (51 тест)
+- [ ] Тесты для api, generator, spark-consumer
+- [ ] Фильтрация и сортировка API
+- [ ] Валидация входных данных
+- [ ] Аутентификация (Spring Security)
+- [ ] Метрики (Actuator + Prometheus)
 - [ ] CI/CD, алертинг, визуализация
 
 ---
@@ -163,7 +182,14 @@ docker compose down -v
 
 ### Сборка
 ```bash
+# Собрать все модули
 ./mvnw clean install
+
+# Собрать без тестов
+./mvnw clean install -DskipTests
+
+# Собрать конкретный модуль
+./mvnw clean install -pl core
 ```
 
 ### Управление сервисами
@@ -176,6 +202,9 @@ docker compose restart generator
 
 # Пересобрать и запустить
 docker compose build spark-consumer && docker compose up -d spark-consumer
+
+# Пересобрать API
+docker compose build api && docker compose up -d api
 
 # Остановить все
 docker compose down
