@@ -5,16 +5,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
  * Модель критической ошибки транзакции для хранения в PostgreSQL
- * <p>
- * Содержит полную информацию оFailed-транзакциях с кодами ошибок,
- * которые фильтруются Spark Streaming и сохраняются для анализа.
- * </p>
  */
 @Entity
 @Table(name = "critical_logs")
@@ -22,6 +19,8 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Accessors(chain = true)
+@Access(AccessType.FIELD)
 public class ErrorLog {
 
     @Id

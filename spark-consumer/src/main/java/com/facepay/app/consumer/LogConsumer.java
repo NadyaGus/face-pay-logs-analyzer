@@ -1,5 +1,6 @@
 package com.facepay.app.consumer;
 
+import com.facepay.app.config.ConfigLoader;
 import com.facepay.app.enums.PaymentStatus;
 import com.facepay.app.models.PaymentTransaction;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,16 +22,14 @@ import java.io.Serializable;
  */
 public class LogConsumer implements Serializable {
 
-    private static final String BOOTSTRAP_SERVERS = System.getenv("BOOTSTRAP_SERVERS");
-    private static final String TOPIC = "face-pay-logs";
-    private static final String DB_TABLE = "critical_logs";
-
-    private static final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-
+    private final ConfigLoader config;
+    private final ObjectMapper objectMapper;
     private final SparkSession spark;
 
     public LogConsumer() {
+        this.config = new ConfigLoader();
+        this.objectMapper = new ObjectMapper()
+                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
         this.spark = createSparkSession();
     }
 
@@ -102,8 +101,8 @@ public class LogConsumer implements Serializable {
     private Dataset<Row> readFromKafka() {
         return spark.readStream()
                 .format("kafka")
-                .option("kafka.bootstrap.servers", BOOTSTRAP_SERVERS)
-                .option("subscribe", TOPIC)
+                .option("kafka.bootstrap.servers", config.getString("facepay.kafka.bootstrap-servers"))
+                .option("subscribe", config.getString("facepay.kafka.topic"))
                 .load();
     }
 
@@ -155,21 +154,21 @@ public class LogConsumer implements Serializable {
      * Создает JDBC URL для PostgreSQL
      */
     private String getPostgresUrl() {
-        return System.getenv("POSTGRES_URL");
+        return config.getString("facepay.postgres.url");
     }
 
     /**
      * Получает имя пользователя PostgreSQL
      */
     private String getPostgresUser() {
-        return System.getenv("POSTGRES_USER");
+        return config.getString("facepay.postgres.user");
     }
 
     /**
      * Получает пароль PostgreSQL
      */
     private String getPostgresPassword() {
-        return System.getenv("POSTGRES_PASSWORD");
+        return config.getString("facepay.postgres.password");
     }
 
     /**
@@ -242,7 +241,7 @@ public class LogConsumer implements Serializable {
                 .mode("append")
                 .format("jdbc")
                 .option("url", postgresUrl)
-                .option("dbtable", DB_TABLE)
+                .option("dbtable", config.getString("facepay.postgres.table"))
                 .option("user", postgresUser)
                 .option("password", postgresPassword)
                 .option("driver", "org.postgresql.Driver")

@@ -78,12 +78,12 @@ services:
       context: .
       dockerfile: spark-consumer/Dockerfile
     environment:
-      # Kafka
-      BOOTSTRAP_SERVERS: ${BOOTSTRAP_SERVERS:-kafka:29092}
-      # PostgreSQL
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+      KAFKA_TOPIC: ${KAFKA_TOPIC:-face-pay-logs}
       POSTGRES_URL: ${POSTGRES_URL:-jdbc:postgresql://postgres:5432/facepay_stream}
       POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_TABLE: ${POSTGRES_TABLE:-critical_logs}
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,7 +91,7 @@ services:
         condition: service_healthy
     networks:
       - facepay-network
-    command: ["java", "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens=java.base/java.lang=ALL-UNNAMED", "--add-opens=java.base/java.util=ALL-UNNAMED", "-Dbootstrap.servers=kafka:29092", "-Dpostgres.url=jdbc:postgresql://postgres:5432/facepay_stream", "-Dpostgres.user=admin", "-Dpostgres.password=admin", "-jar", "app.jar"]
+    command: ["java", "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens=java.base/java.lang=ALL-UNNAMED", "--add-opens=java.base/java.util=ALL-UNNAMED", "-jar", "app.jar"]
 
   # API service
   api:
