@@ -38,17 +38,19 @@ services:
     container_name: facepay-postgres
     ports:
       - "5432:5432"
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-facepay_stream}
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-sql.sql:/docker-entrypoint-initdb.d/init-sql.sql:ro
     networks:
       - facepay-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-facepay_stream}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -60,15 +62,17 @@ services:
     build:
       context: .
       dockerfile: generator/Dockerfile
+    env_file:
+      - .env
     environment:
       # Kafka
-      BOOTSTRAP_SERVERS: ${BOOTSTRAP_SERVERS:-kafka:29092}
+      BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
     depends_on:
       kafka:
         condition: service_healthy
     networks:
       - facepay-network
-    command: ["java", "-Dbootstrap.servers=kafka:29092", "-jar", "app.jar"]
+    command: ["java", "-Dbootstrap.servers=${KAFKA_BOOTSTRAP_SERVERS}", "-jar", "app.jar"]
 
   # Spark consumer service
   spark-consumer:
@@ -77,13 +81,15 @@ services:
     build:
       context: .
       dockerfile: spark-consumer/Dockerfile
+    env_file:
+      - .env
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
-      KAFKA_TOPIC: ${KAFKA_TOPIC:-face-pay-logs}
-      POSTGRES_URL: ${POSTGRES_URL:-jdbc:postgresql://postgres:5432/facepay_stream}
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
-      POSTGRES_TABLE: ${POSTGRES_TABLE:-critical_logs}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_TOPIC: ${KAFKA_TOPIC}
+      POSTGRES_URL: ${POSTGRES_URL}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_TABLE: ${POSTGRES_TABLE}
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,15 +104,18 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
+    env_file:
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      POSTGRES_URL: jdbc:postgresql://postgres:5432/facepay_stream
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+      POSTGRES_URL: ${POSTGRES_URL}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SERVER_PORT: ${SERVER_PORT}
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT}:8080"
     networks:
       - facepay-network
 

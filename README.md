@@ -42,6 +42,23 @@
 ### Предварительные требования
 
 - Docker и Docker Compose установлены
+- Java 21+ (для локальной разработки)
+
+### Конфигурация
+
+Проект использует `.env` файл для управления настройками (креды БД, адреса Kafka и т.д.).
+
+```bash
+# Создайте .env файл из шаблона
+cp .env.example .env
+
+# Отредактируйте .env под ваши нужды
+# POSTGRES_PASSWORD=your_secure_password
+# POSTGRES_DB=your_database_name
+# и т.д.
+```
+
+> ⚠️ **Важно:** Никогда не коммитьте `.env` в Git. Файл уже добавлен в `.gitignore`.
 
 ### Структура проекта
 
@@ -59,11 +76,24 @@ fintech-stream-analyzer/
 ### Сборка и запуск
 
 ```bash
-# Собрать все модули и создать Docker образы
+# 1. Создайте .env файл (если ещё не создан)
+cp .env.example .env
+
+# 2. Собрать все модули и создать Docker образы
 ./mvnw clean install
 
-# Запустить все сервисы (Kafka + PostgreSQL + generator + spark-consumer)
+# 3. Запустить все сервисы (Kafka + PostgreSQL + generator + spark-consumer + api)
 docker compose up -d
+```
+
+### Локальная разработка
+
+```bash
+# Собрать конкретный модуль
+./mvnw clean install -pl core -DskipTests
+
+# Запустить API локально (после запуска postgres и kafka в docker)
+cd api && java -jar target/api-0.0.1-SNAPSHOT.jar
 ```
 
 ## 📊 Проверка работы
