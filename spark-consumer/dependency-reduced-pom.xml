@@ -31,6 +31,7 @@
                 <transformer>
                   <mainClass>com.facepay.app.consumer.LogConsumer</mainClass>
                 </transformer>
+                <transformer />
               </transformers>
               <filters>
                 <filter>

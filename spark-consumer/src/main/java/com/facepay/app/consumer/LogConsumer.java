@@ -11,6 +11,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.SparkConf;
 
+import java.io.IOException;
 import java.io.Serializable;
 
 /**
@@ -22,8 +23,8 @@ import java.io.Serializable;
  */
 public class LogConsumer implements Serializable {
 
-    private final ConfigLoader config;
-    private final ObjectMapper objectMapper;
+    private transient ConfigLoader config;
+    private transient ObjectMapper objectMapper;
     private final SparkSession spark;
 
     public LogConsumer() {
@@ -38,6 +39,16 @@ public class LogConsumer implements Serializable {
      */
     public void stop() {
         spark.stop();
+    }
+
+    /**
+     * Инициализация transient-полей после десериализации Spark-ом.
+     */
+    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        this.config = new ConfigLoader();
+        this.objectMapper = new ObjectMapper()
+                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
     }
 
     /**

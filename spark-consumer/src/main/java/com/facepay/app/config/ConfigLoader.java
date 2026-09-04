@@ -3,7 +3,9 @@ package com.facepay.app.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Objects;
 
@@ -16,9 +18,11 @@ import java.util.Objects;
  * 3. Значения по умолчанию из application.yml
  * </p>
  */
-public class ConfigLoader {
+public class ConfigLoader implements Serializable {
 
-    private final Map<String, String> properties;
+    private static final long serialVersionUID = 1L;
+
+    private transient Map<String, String> properties;
 
     public ConfigLoader() {
         this.properties = loadProperties();
@@ -73,5 +77,14 @@ public class ConfigLoader {
 
     public String getString(String key, String defaultValue) {
         return properties.getOrDefault(key, defaultValue);
+    }
+
+    /**
+     * Восстанавливает состояние после десериализации.
+     * Вызывается Spark-ом при десериализации на executor'е.
+     */
+    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        this.properties = loadProperties();
     }
 }
