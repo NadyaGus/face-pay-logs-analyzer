@@ -1,5 +1,6 @@
 package com.facepay.app.controller;
 
+import com.facepay.app.dto.ErrorLogDTO;
 import com.facepay.app.models.ErrorLog;
 import com.facepay.app.repository.ErrorLogRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,12 +12,18 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -88,5 +95,33 @@ public class ErrorLogController {
     @GetMapping("/search")
     public List<ErrorLog> searchByAccountId(@Parameter(description = "ID аккаунта") @RequestParam("accountId") String accountId) {
         return errorLogRepository.findByAccountIdContaining(accountId);
+    }
+
+    /**
+     * Создание новой записи об ошибке
+     */
+    @Operation(summary = "Создать запись об ошибке")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Ошибка создана"),
+        @ApiResponse(responseCode = "400", description = "Неверный формат данных")
+    })
+    @PostMapping
+    public ResponseEntity<ErrorLog> createErrorLog(@Valid @RequestBody ErrorLogDTO dto) {
+        ErrorLog entity = ErrorLog.builder()
+            .transactionId(dto.getTransactionId())
+            .timestamp(dto.getTimestamp())
+            .accountId(dto.getAccountId())
+            .amount(dto.getAmount())
+            .currency(dto.getCurrency())
+            .status(dto.getStatus())
+            .merchantId(dto.getMerchantId())
+            .errorCode(dto.getErrorCode())
+            .errorMessage(dto.getErrorMessage())
+            .metadata(dto.getMetadata())
+            .createdAt(Instant.now())
+            .build();
+
+        ErrorLog saved = errorLogRepository.save(entity);
+        return ResponseEntity.status(201).body(saved);
     }
 }
